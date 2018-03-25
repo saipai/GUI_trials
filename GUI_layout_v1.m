@@ -22,7 +22,7 @@ function varargout = GUI_layout_v1(varargin)
 
 % Edit the above text to modify the response to help GUI_layout_v1
 
-% Last Modified by GUIDE v2.5 25-Mar-2018 00:27:27
+% Last Modified by GUIDE v2.5 25-Mar-2018 12:39:20
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -54,7 +54,11 @@ function GUI_layout_v1_OpeningFcn(hObject, eventdata, handles, varargin)
 %            command line (see VARARGIN)
 
 
-set(handles.pushbutton6, 'string', 'Browse')
+set(handles.BrosweForModelPred, 'string', 'Browse')
+set(handles.BrowseForMeasurements, 'string', 'Browse')
+set(handles.BrowseForUncertainty, 'string', 'Browse')
+set(handles.PlotParallelAxis, 'string', 'Browse')
+
 % Choose default command line output for GUI_layout_v1
 handles.output = hObject;
 
@@ -76,23 +80,27 @@ function varargout = GUI_layout_v1_OutputFcn(hObject, eventdata, handles)
 varargout{1} = handles.output;
 
 
-% --- Executes on button press in pushbutton3.
-function pushbutton3_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton3 (see GCBO)
+% --- Executes on button press in BrowseForMeasurements.
+function BrowseForMeasurements_Callback(hObject, eventdata, handles)
+% hObject    handle to BrowseForMeasurements (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+[file,path] = uigetfile('*.csv');
+set(handles.PathForMeasurements, 'String', path)
 
 
-% --- Executes on button press in pushbutton4.
-function pushbutton4_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton4 (see GCBO)
+% --- Executes on button press in BrowseForUncertainty.
+function BrowseForUncertainty_Callback(hObject, eventdata, handles)
+% hObject    handle to BrowseForUncertainty (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+[file,path] = uigetfile('*.csv');
+set(handles.PathForUncertainty, 'String', path)
 
 
-% --- Executes on button press in pushbutton5.
-function pushbutton5_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton5 (see GCBO)
+% --- Executes on button press in PlotParallelAxis.
+function PlotParallelAxis_Callback(hObject, eventdata, handles)
+% hObject    handle to PlotParallelAxis (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
@@ -143,20 +151,18 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-% --- Executes on button press in pushbutton6.
-function pushbutton6_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton6 (see GCBO)
+% --- Executes on button press in BrosweForModelPred.
+function BrosweForModelPred_Callback(hObject, eventdata, handles)
+% hObject    handle to BrosweForModelPred (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
 [file,path] = uigetfile('*.csv');
-handles.file1=file;
-handles.path1=path;
-set(handles.text2, 'String', handles.path1)
+set(handles.PathForModelPred, 'String', path)
 
 
 % --- Executes during object creation, after setting all properties.
-function text2_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to text2 (see GCBO)
+function PathForModelPred_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to PathForModelPred (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
