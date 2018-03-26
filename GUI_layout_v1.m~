@@ -62,11 +62,6 @@ set(handles.BrosweForModelPred, 'string', 'Browse')
 set(handles.BrowseForMeasurements, 'string', 'Browse')
 set(handles.BrowseForUncertainty, 'string', 'Browse')
 
-List{1}='EDMF';
-List{2}='BMU';
-List{3}='Res Min';
-set(handles.SysIdMethod, 'String', List)
-
 % Choose default command line output for GUI_layout_v1
 handles.output = hObject;
 
@@ -154,7 +149,8 @@ function SysIdMethod_Callback(hObject, eventdata, handles)
 % Hints: contents = cellstr(get(hObject,'String')) returns SysIdMethod contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from SysIdMethod
 % Proceed with EDMF
-handles.MethodSelected=get(hObject,'Value');
+set(handles.SysIdMethod, 'String', 'EDMF')
+handles.PlotDataForSensor=get(hObject,'Value');
 addpath('/Volumes/GoogleDrive/My Drive/functions')
 Model_Resp=handles.ModelPred(:,end-handles.NumSensors+1:end);
 Parameters=handles.ModelPred(:,1:end-handles.NumSensors);
@@ -181,6 +177,7 @@ function SysIdMethod_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
 
 % --- Executes on button press in BrosweForModelPred.
 function BrosweForModelPred_Callback(hObject, eventdata, handles)
@@ -227,7 +224,8 @@ function PlotCM_Callback(hObject, eventdata, handles)
 % hObject    handle to PlotCM (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if handles.MethodSelected==1
+if 1<=handles.PlotDataForSensor<=handles.NumSensors
+    i=handles.PlotDataForSensor;
     figure()
     plot(handles.CMset(:,1), handles.CMset(:,2), 'b.')
 else
