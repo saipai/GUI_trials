@@ -22,7 +22,8 @@ function varargout = GUI_layout_v1(varargin)
 
 % Edit the above text to modify the response to help GUI_layout_v1
 
-% Last Modified by GUIDE v2.5 06-Apr-2018 00:50:43
+% Last Modified by GUIDE v2.5 26-Mar-2018 14:24:57
+addpath('\\imacnas2\DataServer\EDMF_GUI_folder\')
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -53,12 +54,7 @@ function GUI_layout_v1_OpeningFcn(hObject, eventdata, handles, varargin)
 % varargin   unrecognized PropertyName/PropertyValue pairs from the
 %            command line (see VARARGIN)
 
-fig = gcf; % current figure handle
-fig.Color = [1 1 1];
-
 % Set up the GUI details
-addpath('/Volumes/GoogleDrive/My Drive/functions')
-
 set(handles.PathForModelPred, 'String', 'Browse Model Predictions file')
 set(handles.PathForMeasurements, 'String', 'Browse Measurements file')
 set(handles.PathForUncertainty, 'String', 'Browse Uncertainties file')
@@ -66,12 +62,10 @@ set(handles.PathForUncertainty, 'String', 'Browse Uncertainties file')
 set(handles.BrosweForModelPred, 'string', 'Browse')
 set(handles.BrowseForMeasurements, 'string', 'Browse')
 set(handles.BrowseForUncertainty, 'string', 'Browse')
-set(handles.PopUpSensorUnc,'string','Select a sensor')
 
-List{1}='Select interpretation methodology';
-List{2}='EDMF';
-List{3}='BMU';
-List{4}='Res Min';
+List{1}='EDMF';
+List{2}='BMU';
+List{3}='Res Min';
 set(handles.SysIdMethod, 'String', List)
 
 % Choose default command line output for GUI_layout_v1
@@ -105,9 +99,8 @@ set(handles.PathForMeasurements, 'String', [path, '/', file])
 Measurements=xlsread([path, '/', file]);
 handles.Measurements=Measurements;
 handles.NumSensors=max(size(Measurements));
-List{1}='Select sensor for uncertainty plot';
-for i= 2:handles.NumSensors+1
-    List{i}=['Sensor_', num2str(i-1)];
+for i= 1:handles.NumSensors
+    List{i}=['Sensor_', num2str(i)];
 end
 set(handles.PopUpSensorUnc, 'String', List)
 guidata(hObject, handles);
@@ -118,13 +111,55 @@ function BrowseForUncertainty_Callback(hObject, eventdata, handles)
 % hObject    handle to BrowseForUncertainty (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+% Edited by YR on APR04
 [file,path] = uigetfile('*.xls');
 set(handles.PathForUncertainty, 'String', [path, '/', file])
 % Read uncertainty file
-for i=1:handles.NumSensors
-    UncertaintyInSensor{i}=xlsread([path, '/', file], ['Sheet',num2str(i)]);
-    CombinedUncertainty{i}=random('normal', UncertaintyInSensor{i}(1,1), UncertaintyInSensor{i}(1,2), 1E4, 1);
+
+[~,SheetsInXLS,~] = xlsfinfo(handles.PathForUncertainty.String);
+numUncSensors = length(SheetsInXLS);
+if (numUncSensors ~= 1) && (numUncSensors ~= handles.NumSensors)
+    error('Number of Uncertainty definitions not correct')
 end
+
+CombinedUncertainty = cell(1,handles.NumSensors);
+if (numUncSensors == handles.NumSensors)
+    for i=1:handles.NumSensors
+        [UncertaintyInSensor{i},UncertaintyTypeInSensor{i}]=xlsread([path, '/', file], ['Sheet',num2str(i)]);
+        numUncSources = size(UncertaintyInSensor{i},1);
+        InstUncComb = 1E4;
+        UncVals = zeros(InstUncComb,numUncSources);
+        for j = 1:numUncSources
+            if strcmpi('normal',UncertaintyTypeInSensor{i}(1,2))
+            UncVals(:,j)=random('Normal',UncertaintyInSensor{i}(1,1),UncertaintyInSensor{i}(1,2),InstUncComb,1);
+            elseif strcmpi('uniform',UncertaintyTypeInSensor{i}(1,2))
+                UncVals(:,j)=random('Uniform',UncertaintyInSensor{i}(1,1),UncertaintyInSensor{i}(1,2),InstUncComb,1);
+            else
+                error('Wrong Type of Uncertainty -- accepted types are ''uniform'' and ''normal'' ')
+            end
+                
+            if strcmp(UncertaintyTypeInSensor{i}(1,2),'Relative')
+                UncVals(:,j) = (1+UncVals(:,j)).*handles.Measurements(j);
+            end
+        end
+        CombinedUncertainty{i}=sum(UncVals,2);
+    end
+else
+    [UncertaintyInSensor{1},UncertaintyTypeInSensor{1}]=xlsread([path, '/', file], 'Sheet1');
+    numUncSources = length(UncertaintyInSensor{1});
+    InstUncComb = 1E4;
+    UncVals = zeros(InstUncComb,numUncSources);
+    for j = 1:numUncSources
+        UncVals(:,j)=random(UncertaintyTypeInSensor{1}(1,2),UncertaintyInSensor{1}(1,1),UncertaintyInSensor{1}(1,2),InstUncComb,1);
+        if strcmp(UncertaintyTypeInSensor{1}(1,2),'Relative')
+            UncVals(:,j) = (1+UncVals(:,j)).*handles.Measurements(j);
+        end
+    end
+    for i = 1:handles.NumSensors
+    CombinedUncertainty{i}=sum(UncVals,2);
+    end
+end
+
 handles.UncertaintyInSensor=CombinedUncertainty;
 guidata(hObject, handles);
 
@@ -163,9 +198,24 @@ function SysIdMethod_Callback(hObject, eventdata, handles)
 %        contents{get(hObject,'Value')} returns selected item from SysIdMethod
 % Proceed with EDMF
 handles.MethodSelected=get(hObject,'Value');
+addpath('/Volumes/GoogleDrive/My Drive/functions')
+Model_Resp=handles.ModelPred(:,end-handles.NumSensors+1:end);
+Parameters=handles.ModelPred(:,1:end-handles.NumSensors);
+Measurements=handles.Measurements;
+Tlow = zeros(1,length(Measurements));
+Thigh = zeros(1,length(Measurements));
+for i=1:handles.NumSensors
+    [Tlow(i), Thigh(i)]= f_getThres(handles.UncertaintyInSensor{i}, 0.95^(1/handles.NumSensors), 1E3);
+end
+handles.Tvals = [Tlow ;Thigh];
+residual=Model_Resp-repmat(Measurements,[size(Model_Resp,1),1]);
+EDMF_logical = f_EDMF(residual,Tlow,Thigh);
+handles.CMindexes = EDMF_logical;
+EDMF_logical= sortrows([EDMF_logical Parameters residual],-1);
+CM=EDMF_logical(EDMF_logical(:,1)==1,2:end);
+CM=CM(:,1:size(Parameters, 2));
+handles.CMset=CM;
 guidata(hObject, handles)
-
-
 
 % --- Executes during object creation, after setting all properties.
 function SysIdMethod_CreateFcn(hObject, eventdata, handles)
@@ -214,6 +264,42 @@ if 1<=handles.PlotDataForSensor<=handles.NumSensors
     i=handles.PlotDataForSensor;
     figure()
     histogram(handles.UncertaintyInSensor{i})
+     
+    figure()
+    plot(randperm(length(handles.ModelPred(:,i)),sum(abs(handles.CMindexes-1))),handles.ModelPred((handles.CMindexes==0),end-handles.NumSensors+i),'r.') %#ok<*FNDSB>
+    hold on
+    plot(randperm(length(handles.ModelPred(:,i)),sum(handles.CMindexes)),handles.ModelPred((handles.CMindexes==1),end-handles.NumSensors+i),'g.')
+    
+    UNCvalues = handles.UncertaintyInSensor{i} + handles.Measurements(i);
+    
+    %GetExtremeValuesForPlot
+  
+    if min(UNCvalues) < 0
+        MINPLOTVALUEunc = 1.1*min(UNCvalues);
+    else
+        MINPLOTVALUEunc = 0.9*min(UNCvalues);
+    end
+    
+    if max(UNCvalues) < 0
+        MAXPLOTVALUEunc = 0.9*max(UNCvalues);
+    else
+        MAXPLOTVALUEunc = 1.1*max(UNCvalues);
+    end
+    
+    plot(1.05*length(handles.ModelPred).*ones(1,2),[MINPLOTVALUEunc MAXPLOTVALUEunc],'k-')
+    UncPlotEdges = linspace(MINPLOTVALUEunc,MAXPLOTVALUEunc,68);
+    [UncDist,UncPlotEdges] = histcounts(UNCvalues,UncPlotEdges,'Normalization','pdf');
+    plot(1.05*length(handles.ModelPred)+UncDist./max(UncDist).*0.1.*length(handles.ModelPred),...
+        UncPlotEdges(1:end-1)+0.5*(UncPlotEdges(2)-UncPlotEdges(1)),'b-')
+    plot([0 1.05*length(handles.ModelPred)],handles.Measurements(i).*ones(1,2),'c--','LineWidth',2)
+    plot([0 1.05*length(handles.ModelPred)],handles.Measurements(i).*ones(1,2)+handles.Tvals(1,i),'k--','LineWidth',2)
+    plot([0 1.05*length(handles.ModelPred)],handles.Measurements(i).*ones(1,2)+handles.Tvals(2,i),'k--','LineWidth',2)
+    
+    title(['EDMF for Sensor #',num2str(i)])
+    xlabel('Model Instances')
+    ylabel('Measurement / Model prediction')
+    legend('Falsified MI','Candidate MI')
+       
 else
     figure()
 end
@@ -224,35 +310,10 @@ function PlotCM_Callback(hObject, eventdata, handles)
 % hObject    handle to PlotCM (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if handles.MethodSelected==2
+if handles.MethodSelected==1
     figure()
     plot(handles.CMset(:,1), handles.CMset(:,2), 'b.')
-else
-    msgbox('Select method first')
-end
-
-% --- Executes on button press in InterpretData.
-function InterpretData_Callback(hObject, eventdata, handles)
-% hObject    handle to InterpretData (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-Model_Resp=handles.ModelPred(:,end-handles.NumSensors+1:end);
-Parameters=handles.ModelPred(:,1:end-handles.NumSensors);
-Measurements=handles.Measurements;
-if handles.MethodSelected==2
-    for i=1:handles.NumSensors
-        [Tlow(i), Thigh(i)]= f_getThres(handles.UncertaintyInSensor{i}, 0.95^(1/handles.NumSensors), 1E3);
-    end
-    residual=Model_Resp-repmat(Measurements,[size(Model_Resp,1),1]);
-    EDMF_logical = f_EDMF(residual,Tlow,Thigh);
-    EDMF_logical= sortrows([EDMF_logical Parameters residual],-1);
-    CM=EDMF_logical(EDMF_logical(:,1)==1,2:end);
-    CM=CM(:,1:size(Parameters, 2));
-    handles.CMset=CM;
-    guidata(hObject, handles)
-else handles.MethodSelected==1
-    %     figure()
-    %     plot(handles.CMset(:,1), handles.CMset(:,2), 'r.')
-    msgbox('Select method first')
     
+else
+    figure()
 end

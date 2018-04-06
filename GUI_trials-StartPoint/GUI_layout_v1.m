@@ -22,7 +22,7 @@ function varargout = GUI_layout_v1(varargin)
 
 % Edit the above text to modify the response to help GUI_layout_v1
 
-% Last Modified by GUIDE v2.5 06-Apr-2018 00:50:43
+% Last Modified by GUIDE v2.5 26-Mar-2018 14:24:57
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -53,12 +53,7 @@ function GUI_layout_v1_OpeningFcn(hObject, eventdata, handles, varargin)
 % varargin   unrecognized PropertyName/PropertyValue pairs from the
 %            command line (see VARARGIN)
 
-fig = gcf; % current figure handle
-fig.Color = [1 1 1];
-
 % Set up the GUI details
-addpath('/Volumes/GoogleDrive/My Drive/functions')
-
 set(handles.PathForModelPred, 'String', 'Browse Model Predictions file')
 set(handles.PathForMeasurements, 'String', 'Browse Measurements file')
 set(handles.PathForUncertainty, 'String', 'Browse Uncertainties file')
@@ -66,12 +61,10 @@ set(handles.PathForUncertainty, 'String', 'Browse Uncertainties file')
 set(handles.BrosweForModelPred, 'string', 'Browse')
 set(handles.BrowseForMeasurements, 'string', 'Browse')
 set(handles.BrowseForUncertainty, 'string', 'Browse')
-set(handles.PopUpSensorUnc,'string','Select a sensor')
 
-List{1}='Select interpretation methodology';
-List{2}='EDMF';
-List{3}='BMU';
-List{4}='Res Min';
+List{1}='EDMF';
+List{2}='BMU';
+List{3}='Res Min';
 set(handles.SysIdMethod, 'String', List)
 
 % Choose default command line output for GUI_layout_v1
@@ -105,9 +98,8 @@ set(handles.PathForMeasurements, 'String', [path, '/', file])
 Measurements=xlsread([path, '/', file]);
 handles.Measurements=Measurements;
 handles.NumSensors=max(size(Measurements));
-List{1}='Select sensor for uncertainty plot';
-for i= 2:handles.NumSensors+1
-    List{i}=['Sensor_', num2str(i-1)];
+for i= 1:handles.NumSensors
+    List{i}=['Sensor_', num2str(i)];
 end
 set(handles.PopUpSensorUnc, 'String', List)
 guidata(hObject, handles);
@@ -163,9 +155,20 @@ function SysIdMethod_Callback(hObject, eventdata, handles)
 %        contents{get(hObject,'Value')} returns selected item from SysIdMethod
 % Proceed with EDMF
 handles.MethodSelected=get(hObject,'Value');
+addpath('/Volumes/GoogleDrive/My Drive/functions')
+Model_Resp=handles.ModelPred(:,end-handles.NumSensors+1:end);
+Parameters=handles.ModelPred(:,1:end-handles.NumSensors);
+Measurements=handles.Measurements;
+for i=1:handles.NumSensors
+    [Tlow(i), Thigh(i)]= f_getThres(handles.UncertaintyInSensor{i}, 0.95^(1/handles.NumSensors), 1E3);
+end
+residual=Model_Resp-repmat(Measurements,[size(Model_Resp,1),1]);
+EDMF_logical = f_EDMF(residual,Tlow,Thigh);
+EDMF_logical= sortrows([EDMF_logical Parameters residual],-1);
+CM=EDMF_logical(EDMF_logical(:,1)==1,2:end);
+CM=CM(:,1:size(Parameters, 2));
+handles.CMset=CM;
 guidata(hObject, handles)
-
-
 
 % --- Executes during object creation, after setting all properties.
 function SysIdMethod_CreateFcn(hObject, eventdata, handles)
@@ -224,35 +227,9 @@ function PlotCM_Callback(hObject, eventdata, handles)
 % hObject    handle to PlotCM (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if handles.MethodSelected==2
+if handles.MethodSelected==1
     figure()
     plot(handles.CMset(:,1), handles.CMset(:,2), 'b.')
 else
-    msgbox('Select method first')
-end
-
-% --- Executes on button press in InterpretData.
-function InterpretData_Callback(hObject, eventdata, handles)
-% hObject    handle to InterpretData (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-Model_Resp=handles.ModelPred(:,end-handles.NumSensors+1:end);
-Parameters=handles.ModelPred(:,1:end-handles.NumSensors);
-Measurements=handles.Measurements;
-if handles.MethodSelected==2
-    for i=1:handles.NumSensors
-        [Tlow(i), Thigh(i)]= f_getThres(handles.UncertaintyInSensor{i}, 0.95^(1/handles.NumSensors), 1E3);
-    end
-    residual=Model_Resp-repmat(Measurements,[size(Model_Resp,1),1]);
-    EDMF_logical = f_EDMF(residual,Tlow,Thigh);
-    EDMF_logical= sortrows([EDMF_logical Parameters residual],-1);
-    CM=EDMF_logical(EDMF_logical(:,1)==1,2:end);
-    CM=CM(:,1:size(Parameters, 2));
-    handles.CMset=CM;
-    guidata(hObject, handles)
-else handles.MethodSelected==1
-    %     figure()
-    %     plot(handles.CMset(:,1), handles.CMset(:,2), 'r.')
-    msgbox('Select method first')
-    
+    figure()
 end
