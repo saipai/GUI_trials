@@ -1,9 +1,13 @@
+# Author: Sai Pai
+# Contact: sai.pai@sec.ethz.ch
+# Date: Dec 24 2019
+
 from tkinter import *
 
 root = Tk()
 root.geometry("1000x1000")
 
-left = Frame(root, borderwidth=2, relief="solid", width=100, height=300, background="bisque")
+left = Frame(root, borderwidth=2, relief="solid", width=400, height=300, background="bisque")
 right = Frame(root, borderwidth=2, relief="solid", width=100, height=100, background="red")
 container = Frame(left, borderwidth=2, relief="solid")
 box1 = Frame(right, borderwidth=2, relief="solid")
